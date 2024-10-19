@@ -1,0 +1,12 @@
+{
+  "name": "azure-pipelines-ls",
+  "version": "1.0.0",
+  "bin": "index.js",
+  "main": "index.js",
+  "scripts": {
+    "build": "true"
+  },
+  "dependencies": {
+    "azure-pipelines-language-server": "^0.8.0"
+  }
+}

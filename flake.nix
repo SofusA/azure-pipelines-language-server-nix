@@ -1,56 +1,49 @@
 {
-  description = "A simple derivation for azure-pipelines-language-server";
+  description = "A flake for azure-pipelines-language-server";
 
-  inputs = {
-    nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
-    flake-utils.url = "github:numtide/flake-utils";
-  };
+  inputs.nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
+  inputs.flake-utils.url = "github:numtide/flake-utils";
 
+  outputs = { self, nixpkgs, flake-utils }: 
+    flake-utils.lib.eachDefaultSystem (system: let
+      pkgs = nixpkgs.legacyPackages.${system};
+      nodejs = pkgs.nodejs;
+      makeWrapper = pkgs.makeWrapper;
+    in
+    {
+      packages = let
+        version = let packageJson = with builtins; fromJSON (readFile ./package.json);
+        in builtins.replaceStrings [ "^" "~" ] [ "" "" ]
+        (packageJson.dependencies."azure-pipelines-language-server");
 
-  outputs = { self, nixpkgs, flake-utils }:
-    flake-utils.lib.eachDefaultSystem (system:
-      let
-        pkgs = import nixpkgs { inherit system; };
-
-        azure-pipelines-language-server = pkgs.stdenv.mkDerivation {
+      in {
+        azure-pipelines-language-server = pkgs.mkYarnPackage rec {
           pname = "azure-pipelines-language-server";
           version = "0.8";
+          system = "${system}";
 
-          src = pkgs.fetchFromGitHub {
-            owner = "microsoft";
-            repo = "azure-pipelines-language-server";
-            rev = "main";
-            sha256 = "sha256-etsrkVpRdvGxipa9TQ5cSvTYviIJBkSpjQJaMeuAtXc=";
-          };
+          src = ./.;
+          inherit nodejs;
 
-          buildInputs = [ pkgs.nodePackages.npm ];
-
-          configurePhase = ''
-            echo configure phase
-            ls -a
-          '';
-
-
-          buildPhase = ''
-            echo build phase
-            ls src
-          
-            npm i -C src/azure-pipelines-language-server
-            npm run build -C src/azure-pipelines-language-server
-          '';
+          nativeBuildInputs = with pkgs; [ makeWrapper ];
 
           installPhase = ''
-            install -D build/src/azure-pipelines-language-server/dist/bin/azure-pipelines-language-server $out/bin/azure-pipelines-language-server
+            runHook preInstall
+
+            mkdir -p $out/bin
+            cp -r $node_modules $out
+            cp $src/index.js $out/bin/${pname}-unwrapped
+            chmod a+x $out/bin/${pname}-unwrapped
+
+            makeWrapper $out/bin/${pname}-unwrapped $out/bin/${pname} \
+              --add-flags "--stdio"
+
+            runHook postInstall
           '';
+
+          dontFixup = true;
+          doDist = false;
         };
-      
-      in {
-        devShell = pkgs.mkShell {
-          buildInputs = [
-            azure-pipelines-language-server
-          ];
-        };
-        
-        packages.azure-pipelines-language-server = azure-pipelines-language-server;
-      });
+      };
+    });
 }
