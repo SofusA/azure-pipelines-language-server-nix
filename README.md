@@ -4,11 +4,9 @@ This is a flake which wraps [`@angular/language-server`](https://www.npmjs.com/p
 ## Use with Helix
 `languages.toml`
 ```toml
-[language-server.angular]
-command = "angular-language-server"
-roots = ["angular.json"]
+[language-server.azure-pipelines-language-server]
+command = "azure-pipelines-language-server"
 
 [[language]]
-name = "html"
-language-servers = ["vscode-html-language-server", "angular"]
+name = "yaml"
 ```
